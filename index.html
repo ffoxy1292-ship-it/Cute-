@@ -136,7 +136,12 @@
                     waveY: waveY
                 });
             }
-        
+        }
+
+        function updateInitials() {
+            currentInitials = document.getElementById('initial').value;
+            if (!currentInitials) currentInitials = "❤️";
+        }
 
         function animate() {
             ctx.fillStyle = 'black';
