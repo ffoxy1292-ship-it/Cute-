@@ -9,5 +9,5 @@ A Python turtle graphics animation that draws a parametric heart shape with a gr
 
 ## How to Run
 
-```bash
-python heart_animation.py
+``bash
+python heart_animation.py`
