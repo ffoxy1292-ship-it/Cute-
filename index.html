@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Animation</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="heartCanvas" width="800" height="800"></canvas>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Heart parametric equation
+        function corazon(n) {
+            const x = 16 * Math.pow(Math.sin(n), 3);
+            const y = 13 * Math.cos(n) - 5 * Math.cos(2*n) - 2 * Math.cos(3*n) - Math.cos(4*n);
+            return { x, y };
+        }
+
+        // Scale and center the heart
+        function scaleAndCenter(x, y, scale) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            // Flip Y because canvas Y goes down
+            return {
+                x: centerX + x * scale,
+                y: centerY - y * scale
+            };
+        }
+
+        // Draw the heart with current scale
+        function drawHeart(scale) {
+            ctx.beginPath();
+            
+            let firstPoint = true;
+            
+            for (let n = 0; n <= 100; n += 2) {
+                const angle = n / 10;
+                const { x, y } = corazon(angle);
+                const { x: screenX, y: screenY } = scaleAndCenter(x * scale, y * scale, 12);
+                
+                if (firstPoint) {
+                    ctx.moveTo(screenX, screenY);
+                    firstPoint = false;
+                } else {
+                    ctx.lineTo(screenX, screenY);
+                }
+            }
+            
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Animate growing hearts
+        let scale = 0.5;
+        let growing = true;
+        
+        function animate() {
+            // Clear canvas with black background
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw multiple hearts with different scales (original Python effect)
+            for (let i = 1; i <= 15; i++) {
+                drawHeart(i * 0.15);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
