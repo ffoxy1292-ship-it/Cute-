@@ -17,57 +17,68 @@
         canvas {
             display: block;
             margin: auto;
-            box-shadow: 0 0 20px rgba(255,0,0,0.3);
+            border: 1px solid #330000;
         }
         .controls {
             margin-top: 20px;
             color: white;
             font-family: Arial;
         }
-        input {
-            margin: 10px;
-            padding: 5px;
+        input, button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button {
+            background: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: darkred;
         }
     </style>
 </head>
 <body>
     <canvas id="heartCanvas" width="800" height="800"></canvas>
     <div class="controls">
-        <label style="color: white;">Your Initial: </label>
-        <input type="text" id="initial" maxlength="1" placeholder="A">
-        <button onclick="addInitial()">Add to Heart</button>
+        <label style="color: white;">Your Initials (ex: A+M): </label>
+        <input type="text" id="initial" maxlength="5" placeholder="A+M" value="A+M">
+        <button onclick="updateInitials()">Add to Heart</button>
     </div>
 
     <script>
         const canvas = document.getElementById('heartCanvas');
         const ctx = canvas.getContext('2d');
         
-        let hearts = []; // Store multiple hearts
+        let currentInitials = "A+M";
         let time = 0;
 
-        // Heart parametric equation
+        // Heart parametric equation (FIXED - not upside down)
         function corazon(n) {
             const x = 16 * Math.pow(Math.sin(n), 3);
             const y = 13 * Math.cos(n) - 5 * Math.cos(2*n) - 2 * Math.cos(3*n) - Math.cos(4*n);
             return { x, y };
         }
 
-        // Get heart points
-        function getHeartPoints(scale, offsetX = 0, offsetY = 0) {
+        // Get heart points and flip Y correctly
+        function getHeartPoints(scale, offsetX, offsetY) {
             const points = [];
             for (let n = 0; n <= 100; n += 2) {
                 const angle = n / 10;
                 const { x, y } = corazon(angle);
+                // FIX: Y is negative here because math Y goes up, canvas Y goes down
                 points.push({
                     x: offsetX + x * scale,
-                    y: offsetY + y * scale
+                    y: offsetY - y * scale  // THIS FIXES THE UPSIDE-DOWN
                 });
             }
             return points;
         }
 
         // Draw a single heart
-        function drawHeart(points, color = 'red', lineWidth = 2) {
+        function drawHeart(points, color, lineWidth) {
             if (points.length < 2) return;
             
             ctx.beginPath();
@@ -80,33 +91,42 @@
             ctx.stroke();
         }
 
-        // Draw text on heart
-        function drawTextOnHeart(text, scale, centerX, centerY) {
-            ctx.font = `${Math.floor(scale * 3)}px Arial`;
-            ctx.fillStyle = 'white';
-            ctx.shadowBlur = 10;
+        // Draw initials in the CENTER of the heart
+        function drawInitialsOnHeart(initials, scale, centerX, centerY, waveX, waveY) {
+            // Position: center of the heart is at (centerX, centerY - scale * 2)
+            const heartCenterY = centerY - scale * 2;
+            
+            ctx.font = `bold ${Math.floor(scale * 2.5)}px "Arial"`;
+            ctx.fillStyle = `rgba(255, 200, 200, 0.9)`;
+            ctx.shadowBlur = 8;
             ctx.shadowColor = 'red';
-            ctx.fillText(text, centerX - 10, centerY - scale * 5);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw each character separately for better positioning
+            ctx.fillText(initials, centerX + waveX * 0.5, heartCenterY + waveY * 0.5);
             ctx.shadowBlur = 0;
         }
 
-        // Update animation - creates growing and moving effect
+        let hearts = [];
+
         function updateHearts() {
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             
             hearts = [];
             
-            // Create 15 hearts with different scales (like Python version)
+            // Create 15 layered hearts (like Python version)
             for (let i = 1; i <= 15; i++) {
-                const scale = i * 0.8;
-                // Add subtle movement based on time
-                const waveX = Math.sin(time + i * 0.5) * 3;
-                const waveY = Math.cos(time * 0.8 + i * 0.3) * 2;
+                const scale = i * 0.7;
+                // Gentle wave motion
+                const waveX = Math.sin(time + i * 0.3) * 2;
+                const waveY = Math.cos(time * 0.7 + i * 0.2) * 2;
                 
                 const points = getHeartPoints(scale, centerX + waveX, centerY + waveY);
-                const brightness = Math.floor(100 + (i / 15) * 155);
-                const color = `rgb(255, ${brightness / 3}, ${brightness / 3})`;
+                // Color from bright red to dark red
+                const intensity = 100 + Math.floor((i / 15) * 155);
+                const color = `rgb(255, ${Math.floor(intensity/3)}, ${Math.floor(intensity/3)})`;
                 
                 hearts.push({
                     points: points,
@@ -118,59 +138,43 @@
             }
         }
 
-        // Add initial letter to all hearts
-        function addInitial() {
-            const initial = document.getElementById('initial').value.toUpperCase();
-            if (initial && initial.length === 1) {
-                showInitialOnHearts(initial);
-            }
+        function updateInitials() {
+            currentInitials = document.getElementById('initial').value;
+            if (!currentInitials) currentInitials = "❤️";
         }
 
-        function showInitialOnHearts(letter) {
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            
-            // Draw hearts with letter
-            for (let i = 0; i < hearts.length; i++) {
-                const heart = hearts[i];
-                drawHeart(heart.points, heart.color, 2);
-                
-                ctx.font = `${Math.floor(heart.scale * 2.5)}px "Courier New", monospace`;
-                ctx.fillStyle = `rgba(255, 200, 200, ${0.3 + i/30})`;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = 'red';
-                ctx.fillText(letter, centerX - 8 + heart.waveX, centerY - heart.scale * 4 + heart.waveY);
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        // Main animation with movement
-        let animationFrame;
-        
         function animate() {
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Update time for wave motion
             time += 0.03;
             updateHearts();
             
-            // Draw all hearts (creates the layered 3D effect)
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // Draw all hearts
             for (let i = 0; i < hearts.length; i++) {
                 const heart = hearts[i];
-                drawHeart(heart.points, heart.color, 1.5 + (i / 10));
+                drawHeart(heart.points, heart.color, 1.5 + (i / 12));
+                
+                // Draw initials on each heart
+                drawInitialsOnHeart(
+                    currentInitials, 
+                    heart.scale, 
+                    centerX, 
+                    centerY, 
+                    heart.waveX, 
+                    heart.waveY
+                );
             }
             
-            animationFrame = requestAnimationFrame(animate);
+            requestAnimationFrame(animate);
         }
         
         // Start animation
+        updateInitials();
         animate();
-        
-        // Resize handling
-        window.addEventListener('resize', () => {
-            // Keep it simple
-        });
     </script>
 </body>
 </html>
