@@ -12,19 +12,38 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
         }
         canvas {
             display: block;
             margin: auto;
+            box-shadow: 0 0 20px rgba(255,0,0,0.3);
+        }
+        .controls {
+            margin-top: 20px;
+            color: white;
+            font-family: Arial;
+        }
+        input {
+            margin: 10px;
+            padding: 5px;
         }
     </style>
 </head>
 <body>
     <canvas id="heartCanvas" width="800" height="800"></canvas>
+    <div class="controls">
+        <label style="color: white;">Your Initial: </label>
+        <input type="text" id="initial" maxlength="1" placeholder="A">
+        <button onclick="addInitial()">Add to Heart</button>
+    </div>
 
     <script>
         const canvas = document.getElementById('heartCanvas');
         const ctx = canvas.getContext('2d');
+        
+        let hearts = []; // Store multiple hearts
+        let time = 0;
 
         // Heart parametric equation
         function corazon(n) {
@@ -33,59 +52,125 @@
             return { x, y };
         }
 
-        // Scale and center the heart
-        function scaleAndCenter(x, y, scale) {
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            // Flip Y because canvas Y goes down
-            return {
-                x: centerX + x * scale,
-                y: centerY - y * scale
-            };
-        }
-
-        // Draw the heart with current scale
-        function drawHeart(scale) {
-            ctx.beginPath();
-            
-            let firstPoint = true;
-            
+        // Get heart points
+        function getHeartPoints(scale, offsetX = 0, offsetY = 0) {
+            const points = [];
             for (let n = 0; n <= 100; n += 2) {
                 const angle = n / 10;
                 const { x, y } = corazon(angle);
-                const { x: screenX, y: screenY } = scaleAndCenter(x * scale, y * scale, 12);
-                
-                if (firstPoint) {
-                    ctx.moveTo(screenX, screenY);
-                    firstPoint = false;
-                } else {
-                    ctx.lineTo(screenX, screenY);
-                }
+                points.push({
+                    x: offsetX + x * scale,
+                    y: offsetY + y * scale
+                });
             }
+            return points;
+        }
+
+        // Draw a single heart
+        function drawHeart(points, color = 'red', lineWidth = 2) {
+            if (points.length < 2) return;
             
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
             ctx.stroke();
         }
 
-        // Animate growing hearts
-        let scale = 0.5;
-        let growing = true;
+        // Draw text on heart
+        function drawTextOnHeart(text, scale, centerX, centerY) {
+            ctx.font = `${Math.floor(scale * 3)}px Arial`;
+            ctx.fillStyle = 'white';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'red';
+            ctx.fillText(text, centerX - 10, centerY - scale * 5);
+            ctx.shadowBlur = 0;
+        }
+
+        // Update animation - creates growing and moving effect
+        function updateHearts() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            hearts = [];
+            
+            // Create 15 hearts with different scales (like Python version)
+            for (let i = 1; i <= 15; i++) {
+                const scale = i * 0.8;
+                // Add subtle movement based on time
+                const waveX = Math.sin(time + i * 0.5) * 3;
+                const waveY = Math.cos(time * 0.8 + i * 0.3) * 2;
+                
+                const points = getHeartPoints(scale, centerX + waveX, centerY + waveY);
+                const brightness = Math.floor(100 + (i / 15) * 155);
+                const color = `rgb(255, ${brightness / 3}, ${brightness / 3})`;
+                
+                hearts.push({
+                    points: points,
+                    color: color,
+                    scale: scale,
+                    waveX: waveX,
+                    waveY: waveY
+                });
+            }
+        }
+
+        // Add initial letter to all hearts
+        function addInitial() {
+            const initial = document.getElementById('initial').value.toUpperCase();
+            if (initial && initial.length === 1) {
+                showInitialOnHearts(initial);
+            }
+        }
+
+        function showInitialOnHearts(letter) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // Draw hearts with letter
+            for (let i = 0; i < hearts.length; i++) {
+                const heart = hearts[i];
+                drawHeart(heart.points, heart.color, 2);
+                
+                ctx.font = `${Math.floor(heart.scale * 2.5)}px "Courier New", monospace`;
+                ctx.fillStyle = `rgba(255, 200, 200, ${0.3 + i/30})`;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'red';
+                ctx.fillText(letter, centerX - 8 + heart.waveX, centerY - heart.scale * 4 + heart.waveY);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        // Main animation with movement
+        let animationFrame;
         
         function animate() {
-            // Clear canvas with black background
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw multiple hearts with different scales (original Python effect)
-            for (let i = 1; i <= 15; i++) {
-                drawHeart(i * 0.15);
+            // Update time for wave motion
+            time += 0.03;
+            updateHearts();
+            
+            // Draw all hearts (creates the layered 3D effect)
+            for (let i = 0; i < hearts.length; i++) {
+                const heart = hearts[i];
+                drawHeart(heart.points, heart.color, 1.5 + (i / 10));
             }
             
-            requestAnimationFrame(animate);
+            animationFrame = requestAnimationFrame(animate);
         }
         
+        // Start animation
         animate();
+        
+        // Resize handling
+        window.addEventListener('resize', () => {
+            // Keep it simple
+        });
     </script>
 </body>
 </html>
